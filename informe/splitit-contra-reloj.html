@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;700;800;900&family=Geist+Mono:wght@500;700&display=swap">
 <style>
-  /* Layout: una columna como la app de SplitIt; cada resultado es una tarjeta de saldo. */
+  /* Layout: una columna como la app de SplitIt; cada resultado es una tarjeta de saldo. Solo tema claro. */
   :root {
     --verde: #28c49e;
     --verde-suave: rgba(40, 196, 158, 0.12);
@@ -28,20 +28,8 @@
     --f-texto: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     --f-mono: "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
   }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --verde: #34d6ad; --verde-suave: rgba(52, 214, 173, 0.14);
-      --tinta: #e9f1f6; --tinta-2: #93a3b1; --fondo: #04121d; --tarjeta: #0b1f2e; --borde: #183245;
-      --azul: #5bb7ea; --azul-suave: rgba(91, 183, 234, 0.16); --naranja: #f4a261; --naranja-suave: rgba(244, 162, 97, 0.16);
-      --grilla: #163043; --sombra: 0 18px 50px rgba(0, 0, 0, 0.35); color-scheme: dark;
-    }
-  }
-  :root[data-theme="dark"] {
-    --verde: #34d6ad; --verde-suave: rgba(52, 214, 173, 0.14);
-    --tinta: #e9f1f6; --tinta-2: #93a3b1; --fondo: #04121d; --tarjeta: #0b1f2e; --borde: #183245;
-    --azul: #5bb7ea; --azul-suave: rgba(91, 183, 234, 0.16); --naranja: #f4a261; --naranja-suave: rgba(244, 162, 97, 0.16);
-    --grilla: #163043; --sombra: 0 18px 50px rgba(0, 0, 0, 0.35); color-scheme: dark;
-  }
+  /* Siempre claro, como la app de SplitIt. */
+  :root { color-scheme: light; }
 
   * { box-sizing: border-box; }
   body {
