@@ -1,0 +1,8 @@
+{
+  "name": "splitit-simulacion-playwright",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "@playwright/test": "1.49.1"
+  }
+}

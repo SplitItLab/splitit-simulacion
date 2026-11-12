@@ -1,0 +1,68 @@
+# Se monta encima del docker-compose.yml del repo de la app, sin tocarlo.
+# Proyecto aparte (splitit-sim), con puertos, contenedores y base propios: no pisa el stack de desarrollo.
+# No lee el .env del repo: todo lo que necesita está acá o en .env.sim.
+services:
+  db:
+    env_file: !reset []
+    ports: !override
+      - "${POSTGRES_PORT}:5432"
+
+  api:
+    container_name: splitit-sim-api
+    env_file: !reset []
+    depends_on:
+      fake-google:
+        condition: service_started
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_SSLMODE: disable
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION_HOURS: "8"
+      AUTH_COOKIE_NAME: auth_token
+      AUTH_COOKIE_SECURE: "false"
+      AUTH_COOKIE_SAME_SITE: Lax
+      CORS_ALLOWED_ORIGINS: http://localhost:${WEB_PORT}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      # Los KPIs de la simulación nunca salen de la máquina.
+      KPI_EXPORT_MODE: local
+      SUPABASE_URL: ""
+      SUPABASE_PUBLISHABLE_KEY: ""
+      SUPABASE_PROJECT_KEY: ""
+      # Confía en el certificado del Google falso, además de los de siempre.
+      JAVA_TOOL_OPTIONS: >-
+        -Djavax.net.ssl.trustStore=/sim/truststore.p12
+        -Djavax.net.ssl.trustStorePassword=changeit
+        -Djavax.net.ssl.trustStoreType=PKCS12
+    volumes:
+      - ${SIM_DIR}/certs/truststore.p12:/sim/truststore.p12:ro
+    ports: !override
+      - "${API_PORT}:8080"
+
+  web:
+    container_name: splitit-sim-web
+    env_file: !reset []
+    build:
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:${API_PORT}
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+        NEXT_PUBLIC_SITE_URL: http://localhost:${WEB_PORT}
+    ports: !override
+      - "${WEB_PORT}:3000"
+
+  fake-google:
+    image: node:22-alpine
+    container_name: splitit-sim-google
+    command: ["node", "/app/server.mjs"]
+    environment:
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+    volumes:
+      - ${SIM_DIR}/fake-google:/app:ro
+      - ${SIM_DIR}/certs:/certs:ro
+    ports:
+      - "${MINT_PORT}:8099"
+    networks:
+      default:
+        aliases:
+          - www.googleapis.com

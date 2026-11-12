@@ -1,0 +1,450 @@
+<title>SplitIt contra reloj</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;700;800;900&family=Geist+Mono:wght@500;700&display=swap">
+<style>
+  /* Layout: una columna como la app de SplitIt; cada resultado es una tarjeta de saldo. */
+  :root {
+    --verde: #28c49e;
+    --verde-suave: rgba(40, 196, 158, 0.12);
+    --tinta: #001625;
+    --tinta-2: #6d6f77;
+    --fondo: #f1f5f9;
+    --tarjeta: #ffffff;
+    --borde: #e2e8ee;
+    --azul: #2d9cdb;
+    --azul-suave: rgba(45, 156, 219, 0.12);
+    --naranja: #e8833a;
+    --naranja-suave: rgba(242, 153, 74, 0.16);
+    --grilla: #e6ebf0;
+    --sombra: 0 18px 50px rgba(7, 27, 58, 0.10);
+    --f-texto: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --f-mono: "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --verde: #34d6ad; --verde-suave: rgba(52, 214, 173, 0.14);
+      --tinta: #e9f1f6; --tinta-2: #93a3b1; --fondo: #04121d; --tarjeta: #0b1f2e; --borde: #183245;
+      --azul: #5bb7ea; --azul-suave: rgba(91, 183, 234, 0.16); --naranja: #f4a261; --naranja-suave: rgba(244, 162, 97, 0.16);
+      --grilla: #163043; --sombra: 0 18px 50px rgba(0, 0, 0, 0.35); color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --verde: #34d6ad; --verde-suave: rgba(52, 214, 173, 0.14);
+    --tinta: #e9f1f6; --tinta-2: #93a3b1; --fondo: #04121d; --tarjeta: #0b1f2e; --borde: #183245;
+    --azul: #5bb7ea; --azul-suave: rgba(91, 183, 234, 0.16); --naranja: #f4a261; --naranja-suave: rgba(244, 162, 97, 0.16);
+    --grilla: #163043; --sombra: 0 18px 50px rgba(0, 0, 0, 0.35); color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--fondo); color: var(--tinta); font-family: var(--f-texto); font-size: 15px; line-height: 1.55;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 20px 64px;
+  }
+  .hoja { max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 56px; }
+  h1, h2, h3 { margin: 0; text-wrap: balance; color: var(--tinta); }
+  h1 { font-size: clamp(36px, 6vw, 60px); line-height: 1.08; font-weight: 800; letter-spacing: -0.02em; }
+  h2 { font-size: clamp(26px, 3.6vw, 36px); line-height: 1.15; font-weight: 800; letter-spacing: -0.01em; }
+  h3 { font-size: 16px; font-weight: 900; }
+  p { margin: 0; max-width: 64ch; }
+  .suave { color: var(--tinta-2); }
+  .num { font-variant-numeric: tabular-nums; }
+  .etiqueta { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tinta-2); }
+
+  /* Encabezado */
+  .barra { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .logo { display: inline-flex; align-items: center; border: 1px solid var(--borde); background: var(--tarjeta); border-radius: 20px; padding: 10px 14px; }
+  .logo b { font-size: 22px; font-weight: 800; line-height: 1; }
+  .logo .split { background: var(--verde); color: #fff; border-radius: 8px; padding: 4px 5px 5px 6px; }
+  .logo .it { padding-left: 1px; color: var(--tinta); }
+  .sello { font-size: 13px; color: var(--tinta-2); font-weight: 500; }
+
+  /* Portada */
+  .portada { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: 40px; align-items: center; }
+  .portada .texto { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+  .cita { border-left: 3px solid var(--verde); padding-left: 14px; color: var(--tinta-2); font-size: 14px; }
+  .tarjeta { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 24px; box-shadow: var(--sombra); }
+  .saldos { padding: 20px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .saldos .cab { margin-bottom: 10px; }
+  .saldos .cab p { font-size: 13px; }
+  .fila { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--borde); }
+  .fila:first-of-type { border-top: 0; }
+  .avatar { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-weight: 900; font-size: 13px; background: var(--fondo); color: var(--tinta); }
+  .fila .nombre { font-weight: 900; font-size: 14px; }
+  .fila .det { font-size: 12px; color: var(--tinta-2); }
+  .pill { display: inline-flex; border-radius: 999px; padding: 2px 9px; font-size: 11px; font-weight: 900; margin-top: 3px; }
+  .pill.ok { background: var(--verde-suave); color: var(--verde); }
+  .pill.no { background: var(--naranja-suave); color: var(--naranja); }
+  .monto { font-weight: 900; font-size: 22px; text-align: right; }
+  .monto small { display: block; font-size: 11px; font-weight: 500; color: var(--tinta-2); }
+  .medidor { grid-column: 2 / 4; height: 10px; border-radius: 999px; background: var(--fondo); position: relative; overflow: visible; }
+  .medidor i { position: absolute; inset: 0 auto 0 0; border-radius: 999px; background: var(--verde); }
+  .medidor .meta { position: absolute; top: -5px; bottom: -5px; width: 2px; background: var(--tinta); border-radius: 2px; }
+  .medidor .meta span { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); font-size: 10.5px; font-weight: 700; color: var(--tinta-2); white-space: nowrap; }
+  .fila.con-medidor { padding-bottom: 26px; }
+
+  /* Secciones */
+  .seccion { display: flex; flex-direction: column; gap: 20px; }
+  .seccion > header { display: flex; flex-direction: column; gap: 8px; }
+
+  /* Videos */
+  .videos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+  .reproductor { padding: 18px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  .reproductor .titulo { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+  .marco { position: relative; margin: 0 auto; width: min(100%, 300px); border-radius: 30px; border: 6px solid var(--tinta); background: var(--tinta); overflow: hidden; }
+  .marco video { display: block; width: 100%; height: auto; max-width: 100%; aspect-ratio: 412 / 839; object-fit: contain; background: #fff; }
+  .reloj { display: flex; flex-direction: column; gap: 6px; }
+  .reloj .lectura { display: flex; justify-content: space-between; font-family: var(--f-mono); font-size: 13px; font-weight: 700; }
+  .reloj .lectura .t { font-size: 24px; color: var(--verde); }
+  .pista { height: 8px; border-radius: 999px; background: var(--fondo); overflow: hidden; }
+  .pista i { display: block; height: 100%; width: 0%; background: var(--verde); border-radius: 999px; transition: width 0.2s linear; }
+  .capitulos { display: flex; flex-wrap: wrap; gap: 6px; }
+  .capitulos button, .velocidad button {
+    font: inherit; font-size: 12px; font-weight: 700; border: 1px solid var(--borde); background: var(--tarjeta); color: var(--tinta);
+    border-radius: 999px; padding: 5px 10px; cursor: pointer;
+  }
+  .capitulos button[aria-current="true"] { background: var(--verde-suave); border-color: var(--verde); color: var(--verde); }
+  .capitulos button:hover, .velocidad button:hover { border-color: var(--verde); }
+  button:focus-visible { outline: 2px solid var(--verde); outline-offset: 2px; }
+  .velocidad { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--tinta-2); }
+  .velocidad button[aria-pressed="true"] { background: var(--tinta); color: var(--tarjeta); border-color: var(--tinta); }
+
+  /* Gráficos */
+  .graficos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+  .grafico { padding: 20px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .grafico svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .grafico .pie { font-size: 13px; color: var(--tinta-2); }
+  .ancho { grid-column: 1 / -1; }
+  svg text { font-family: var(--f-texto); fill: var(--tinta-2); font-size: 11px; }
+  svg .fuerte { fill: var(--tinta); font-weight: 800; }
+  svg .grid { stroke: var(--grilla); stroke-width: 1; }
+  svg .eje { stroke: var(--borde); stroke-width: 1; }
+  svg .limite { stroke: var(--naranja); stroke-width: 1.5; stroke-dasharray: 4 4; }
+  svg .limite-txt { fill: var(--naranja); font-weight: 800; }
+  svg .p80 { stroke: var(--tinta); stroke-width: 1.5; }
+  .leyenda { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--tinta-2); }
+  .leyenda span { display: inline-flex; align-items: center; gap: 6px; }
+  .leyenda i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+
+  /* Contraste y límites */
+  .dos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+  .bloque { padding: 22px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .grande { font-size: 44px; font-weight: 900; line-height: 1; color: var(--verde); }
+  ul.limites { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  ul.limites li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; font-size: 14px; }
+  ul.limites li::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--naranja); margin-top: 6px; }
+  ol.fuentes { margin: 0; padding-left: 20px; font-size: 13px; color: var(--tinta-2); display: flex; flex-direction: column; gap: 4px; }
+  ol.fuentes a { color: var(--tinta); }
+  pre { margin: 0; background: var(--tinta); color: var(--fondo); border-radius: 16px; padding: 16px; overflow-x: auto; font-family: var(--f-mono); font-size: 13px; line-height: 1.7; }
+  footer { font-size: 13px; color: var(--tinta-2); display: flex; flex-direction: column; gap: 12px; }
+
+  @media (max-width: 820px) {
+    .portada, .videos, .graficos, .dos { grid-template-columns: minmax(0, 1fr); }
+    .ancho { grid-column: auto; }
+  }
+  @media (prefers-reduced-motion: reduce) { .pista i { transition: none; } }
+</style>
+
+<div class="hoja">
+  <div class="barra">
+    <span class="logo" aria-label="SplitIt"><b class="split">Split</b><b class="it">It</b></span>
+    <span class="sello" id="sello"></span>
+  </div>
+
+  <section class="portada">
+    <div class="texto">
+      <span class="etiqueta">Objetivo de producto · validación simulada</span>
+      <h1>Las dos metas se cumplen a ritmo humano.</h1>
+      <p class="suave">Personas simuladas, con demoras tomadas de la investigación sobre cómo usa la gente una pantalla, recorrieron SplitIt de punta a punta mientras se las cronometraba.</p>
+      <p class="cita">“Al menos el 80% de los usuarios que crean un grupo registran un gasto en menos de 2 minutos, y al menos el 80% de los invitados ve su balance en menos de 30 segundos.”</p>
+    </div>
+    <div class="tarjeta saldos" aria-label="Resultado por meta">
+      <div class="cab">
+        <h3>Resultado por meta</h3>
+        <p class="suave" id="cab-saldos"></p>
+      </div>
+      <div id="filas-meta"></div>
+    </div>
+  </section>
+
+  <section class="seccion">
+    <header>
+      <span class="etiqueta">Grabado durante la corrida</span>
+      <h2>Mirá a una persona hacerlo</h2>
+      <p class="suave">Navegadores reales en tamaño celular, con la carga de todos los demás usuarios encima. Es la persona con el ritmo más parecido al promedio. Tocá un momento para saltar a esa parte.</p>
+    </header>
+    <div class="videos" id="videos"></div>
+  </section>
+
+  <section class="seccion">
+    <header>
+      <span class="etiqueta">Todas las personas simuladas</span>
+      <h2>Casi todos terminan con margen</h2>
+      <p class="suave" id="intro-todos"></p>
+    </header>
+    <div class="graficos">
+      <div class="tarjeta grafico"><h3>Owner: del registro al primer gasto</h3><div id="hist-owner"></div><p class="pie" id="pie-owner"></p></div>
+      <div class="tarjeta grafico"><h3>Invitado: del link a su saldo</h3><div id="hist-invitado"></div><p class="pie" id="pie-invitado"></p></div>
+      <div class="tarjeta grafico ancho">
+        <h3>El tiempo lo pone la persona, no la app</h3>
+        <div class="leyenda"><span><i style="background:var(--verde)"></i>Owner</span><span><i style="background:var(--azul)"></i>Invitado</span><span><i style="background:var(--naranja)"></i>Límite de cada recorrido</span></div>
+        <div id="dispersion"></div>
+        <p class="pie">Cada punto es una persona. A la derecha, las más lentas. El alto es el tiempo que tardó, como parte de su límite. La app respondió cada paso en milésimas de segundo, así que la diferencia la hace el ritmo de cada uno.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="seccion">
+    <header>
+      <span class="etiqueta">De dónde salen las demoras</span>
+      <h2>En qué se va el tiempo de una persona promedio</h2>
+      <p class="suave">Cada acción tarda lo que mide la investigación: pensar antes de actuar, llevar el dedo al botón, tipear en el celular y leer. Sumadas, dejan un margen amplio contra cada límite.</p>
+    </header>
+    <div class="tarjeta grafico">
+      <div class="leyenda" id="leyenda-desglose"></div>
+      <div id="desglose"></div>
+      <ol class="fuentes">
+        <li>Pensar 1,35 s y tocar 1,2 s: modelo KLM. <a href="https://doi.org/10.1145/358886.358895" target="_blank" rel="noopener">Card, Moran y Newell, 1980</a>.</li>
+        <li>Tipear 0,33 s por letra, unas 36 palabras por minuto en celular: <a href="https://doi.org/10.1145/3338286.3340120" target="_blank" rel="noopener">Palin et al., 2019</a>, 37.370 personas.</li>
+        <li>Leer 0,25 s por palabra, unas 240 por minuto: <a href="https://doi.org/10.1016/j.jml.2019.104047" target="_blank" rel="noopener">Brysbaert, 2019</a>.</li>
+        <li>Variación entre personas: supuesto del orden de la dispersión del tipeo en Palin (2019) y <a href="https://doi.org/10.1145/3173574.3174220" target="_blank" rel="noopener">Dhakal et al., 2018</a>.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="dos">
+    <div class="tarjeta bloque">
+      <span class="etiqueta">Contraste con el KPI diario</span>
+      <div class="grande num" id="kpi-grande"></div>
+      <p id="kpi-texto"></p>
+    </div>
+    <div class="tarjeta bloque">
+      <span class="etiqueta">Lo que no cubre</span>
+      <ul class="limites">
+        <li><span>Que alguien entienda una pantalla la primera vez. El robot sabe qué tocar; una persona puede dudar o volver atrás.</span></li>
+        <li><span>Lo que tarda en abrir la ventana real de Google y la red del celular.</span></li>
+        <li><span>Eventos grandes: el recorrido usa tres amigos y un gasto.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>
+    <p>Todo corrió en una sola máquina, sobre una copia de SplitIt con base propia y un Google simulado que la app verifica como el real. La app no se modificó y ningún KPI salió a la plataforma de la cátedra. Para repetirla, desde la carpeta <code>splitit-simulacion</code>:</p>
+    <pre>./sim.sh levantar
+./sim.sh correr
+.venv/bin/python -I informe/armar.py .</pre>
+  </footer>
+</div>
+
+<script>
+const D = __DATOS__;
+const NS = "http://www.w3.org/2000/svg";
+const fmt = (n, d = 0) => n.toLocaleString("es-AR", { minimumFractionDigits: d, maximumFractionDigits: d });
+const reloj = s => { s = Math.max(0, s); return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`; };
+const limiteTxt = s => s >= 60 ? `${s / 60} min` : `${s} s`;
+const NOMBRES = { owner: "Owner", invitado: "Invitado" };
+const DETALLE = { owner: "Se registra, crea el evento y carga un gasto", invitado: "Abre el link y ve su saldo, sin cuenta" };
+
+function el(tag, attrs = {}, padre) {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  if (padre) padre.appendChild(e);
+  return e;
+}
+function texto(padre, x, y, contenido, attrs = {}) {
+  const t = el("text", { x, y, ...attrs }, padre);
+  t.textContent = contenido;
+  return t;
+}
+
+/* Encabezado y tarjeta de metas */
+document.getElementById("sello").textContent = `Corrida local del ${D.fecha} · ${D.usuarios} usuarios a la vez`;
+document.getElementById("cab-saldos").textContent = `Meta: ${D.meta}% de las personas dentro del límite`;
+const filas = document.getElementById("filas-meta");
+for (const k of ["owner", "invitado"]) {
+  const r = D.locust[k];
+  const pct = r.personas ? (100 * r.dentro) / r.personas : 0;
+  const margen = pct - D.meta;
+  const cumple = pct >= D.meta;
+  const f = document.createElement("div");
+  f.className = "fila con-medidor";
+  f.innerHTML = `
+    <span class="avatar">${k === "owner" ? "OW" : "IN"}</span>
+    <div><div class="nombre">${NOMBRES[k]} · menos de ${limiteTxt(D.limites[k])}</div>
+      <div class="det">${DETALLE[k]}</div>
+      <span class="pill ${cumple ? "ok" : "no"}">${cumple ? "cumple" : "no cumple"}</span></div>
+    <div class="monto num" style="color:${cumple ? "var(--verde)" : "var(--naranja)"}">${fmt(pct)}%
+      <small>${margen >= 0 ? "+" : ""}${fmt(margen)} pts sobre la meta</small></div>
+    <div class="medidor" role="img" aria-label="${fmt(pct)}% dentro del límite, meta ${D.meta}%">
+      <i style="width:${pct}%; background:${cumple ? "var(--verde)" : "var(--naranja)"}"></i>
+      <span class="meta" style="left:${D.meta}%"><span>meta ${D.meta}%</span></span>
+    </div>`;
+  filas.appendChild(f);
+}
+
+/* Videos con cronómetro */
+const vids = document.getElementById("videos");
+for (const k of ["owner", "invitado"]) {
+  const v = D.videos[k];
+  const inicio = v.momentos[0]?.s ?? 0;
+  const fin = v.momentos.at(-1)?.s ?? inicio + v.segundos;
+  const lim = D.limites[k];
+  const card = document.createElement("div");
+  card.className = "tarjeta reproductor";
+  card.innerHTML = `
+    <div class="titulo"><h3>${NOMBRES[k]}: ${DETALLE[k].toLowerCase()}</h3>
+      <span class="suave num" style="font-size:12px">ritmo ${fmt(v.ritmo, 2)}× · terminó en ${fmt(v.segundos)} s</span></div>
+    <div class="marco"><video muted autoplay loop playsinline preload="auto" aria-label="Grabación del recorrido del ${NOMBRES[k].toLowerCase()}"><source src="${v.mp4}" type="video/mp4"><source src="${v.webm}" type="video/webm"></video></div>
+    <div class="reloj">
+      <div class="lectura"><span class="t num">0:00</span><span class="suave num">límite ${reloj(lim)}</span></div>
+      <div class="pista" role="img" aria-label="Tiempo usado del límite"><i></i></div>
+    </div>
+    <div class="capitulos"></div>
+    <div class="velocidad">Velocidad <button type="button" data-v="1" aria-pressed="false">1×</button><button type="button" data-v="2" aria-pressed="true">2×</button></div>`;
+  vids.appendChild(card);
+  const video = card.querySelector("video");
+  const t = card.querySelector(".t");
+  const barra = card.querySelector(".pista i");
+  const caps = card.querySelector(".capitulos");
+  const botones = v.momentos.slice(0, -1).map((m, i) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = m.momento;
+    b.addEventListener("click", () => { video.currentTime = m.s; video.play().catch(() => {}); });
+    caps.appendChild(b);
+    return { b, desde: m.s, hasta: v.momentos[i + 1].s };
+  });
+  video.playbackRate = 2;
+  video.addEventListener("loadedmetadata", () => { video.playbackRate = 2; });
+  card.querySelectorAll(".velocidad button").forEach(b => b.addEventListener("click", () => {
+    video.playbackRate = Number(b.dataset.v);
+    card.querySelectorAll(".velocidad button").forEach(o => o.setAttribute("aria-pressed", String(o === b)));
+  }));
+  const pintar = () => {
+    const usado = Math.min(Math.max(video.currentTime, inicio), fin) - inicio;
+    t.textContent = reloj(usado);
+    barra.style.width = `${Math.min(100, (100 * usado) / lim)}%`;
+    for (const c of botones) c.b.setAttribute("aria-current", String(video.currentTime >= c.desde && video.currentTime < c.hasta));
+  };
+  video.addEventListener("timeupdate", pintar);
+  video.addEventListener("seeked", pintar);
+}
+
+/* Histogramas */
+function histograma(k, contenedor, pie) {
+  const r = D.locust[k];
+  const lim = D.limites[k];
+  const vals = r.detalle.filter(p => p.termino).map(p => p.segundos);
+  const paso = k === "owner" ? 10 : 2;
+  const tope = Math.ceil(Math.max(lim * 1.1, ...vals) / paso) * paso;
+  const bins = Array.from({ length: tope / paso }, (_, i) => ({ desde: i * paso, n: 0 }));
+  for (const v of vals) bins[Math.min(bins.length - 1, Math.floor(v / paso))].n++;
+  const W = 480, H = 260, m = { l: 34, r: 12, t: 28, b: 36 };
+  const X = s => m.l + (s / tope) * (W - m.l - m.r);
+  const maxN = Math.max(...bins.map(b => b.n), 1);
+  const pasoY = maxN > 40 ? 20 : maxN > 16 ? 10 : maxN > 8 ? 4 : 2;
+  const topeY = Math.ceil(maxN / pasoY) * pasoY;
+  const Y = n => H - m.b - (n / topeY) * (H - m.t - m.b);
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": `Distribución de tiempos del ${NOMBRES[k].toLowerCase()}` });
+  for (let n = 0; n <= topeY; n += pasoY) {
+    el("line", { x1: m.l, x2: W - m.r, y1: Y(n), y2: Y(n), class: "grid" }, svg);
+    texto(svg, m.l - 6, Y(n) + 4, fmt(n), { "text-anchor": "end" });
+  }
+  const pasoX = k === "owner" ? 30 : 10;
+  for (let s = 0; s <= tope; s += pasoX) texto(svg, X(s), H - m.b + 16, `${s} s`, { "text-anchor": "middle" });
+  texto(svg, (m.l + W - m.r) / 2, H - 4, "segundos que tardó", { "text-anchor": "middle" });
+  texto(svg, 0, 12, "personas", {});
+  const ancho = X(paso) - X(0) - 2;
+  for (const b of bins) {
+    if (!b.n) continue;
+    const fuera = b.desde + paso > lim;
+    el("rect", { x: X(b.desde) + 1, y: Y(b.n), width: ancho, height: Y(0) - Y(b.n), rx: 3, fill: fuera ? "var(--naranja)" : "var(--verde)" }, svg);
+  }
+  el("line", { x1: X(lim), x2: X(lim), y1: m.t - 8, y2: H - m.b, class: "limite" }, svg);
+  texto(svg, X(lim) - 4, m.t - 12, `límite ${limiteTxt(lim)}`, { "text-anchor": "end", class: "limite-txt" });
+  if (r.p80 != null) {
+    el("line", { x1: X(r.p80), x2: X(r.p80), y1: m.t + 6, y2: H - m.b, class: "p80" }, svg);
+    const izquierda = X(r.p80) + 140 > X(lim);
+    texto(svg, X(r.p80) + (izquierda ? -5 : 5), m.t + 16, `el 80% en menos de ${fmt(r.p80)} s`, { class: "fuerte", "text-anchor": izquierda ? "end" : "start" });
+  }
+  contenedor.appendChild(svg);
+  const fuera = r.personas - r.dentro;
+  const noTerm = r.detalle.filter(p => !p.termino).length;
+  pie.textContent = `${fmt(r.personas)} personas. Mitad en menos de ${fmt(r.p50)} s. ` +
+    (fuera ? `${fmt(fuera)} se pasaron del límite${noTerm ? `, ${noTerm} sin terminar` : ""}, en naranja.` : "Ninguna se pasó del límite.");
+}
+histograma("owner", document.getElementById("hist-owner"), document.getElementById("pie-owner"));
+histograma("invitado", document.getElementById("hist-invitado"), document.getElementById("pie-invitado"));
+const totalP = D.locust.owner.personas + D.locust.invitado.personas;
+document.getElementById("intro-todos").textContent =
+  `${fmt(totalP)} personas simuladas, ${D.usuarios} a la vez, cada una con su propio ritmo: algunas rápidas, otras el doble de lentas que el promedio. Cada barra junta a las que tardaron parecido.`;
+
+/* Dispersión ritmo vs tiempo */
+(() => {
+  const W = 980, H = 320, m = { l: 48, r: 16, t: 40, b: 40 };
+  const puntos = ["owner", "invitado"].flatMap(k => D.locust[k].detalle.filter(p => p.termino).map(p => ({ k, ritmo: p.ritmo, pct: (100 * p.segundos) / D.limites[k] })));
+  const maxR = Math.max(2.5, ...puntos.map(p => p.ritmo));
+  const topeR = Math.ceil(maxR * 2) / 2;
+  const topeY = Math.max(125, Math.ceil(Math.max(...puntos.map(p => p.pct)) / 25) * 25);
+  const X = r => m.l + (r / topeR) * (W - m.l - m.r);
+  const Y = p => H - m.b - (p / topeY) * (H - m.t - m.b);
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Tiempo de cada persona según su ritmo" });
+  for (let p = 0; p <= topeY; p += 25) {
+    el("line", { x1: m.l, x2: W - m.r, y1: Y(p), y2: Y(p), class: "grid" }, svg);
+    texto(svg, m.l - 6, Y(p) + 4, `${p}%`, { "text-anchor": "end" });
+  }
+  for (let r = 0; r <= topeR + 1e-9; r += 0.5) texto(svg, X(r), H - m.b + 16, `${fmt(r, 1)}×`, { "text-anchor": "middle" });
+  texto(svg, (m.l + W - m.r) / 2, H - 4, "ritmo de la persona (1× = promedio; 2× tarda el doble en cada acción)", { "text-anchor": "middle" });
+  el("line", { x1: X(1), x2: X(1), y1: m.t, y2: H - m.b, class: "eje" }, svg);
+  el("line", { x1: m.l, x2: W - m.r, y1: Y(100), y2: Y(100), class: "limite" }, svg);
+  texto(svg, W - m.r, Y(100) - 6, "límite", { "text-anchor": "end", class: "limite-txt" });
+  texto(svg, 2, 12, "tiempo usado del límite", {});
+  // Los owners van encima: son menos y si no, los tapan los invitados.
+  puntos.sort((a, b) => (a.k === "owner") - (b.k === "owner"));
+  for (const p of puntos) {
+    el("circle", { cx: X(p.ritmo), cy: Y(p.pct), r: p.k === "owner" ? 5 : 4, fill: p.k === "owner" ? "var(--verde)" : "var(--azul)", "fill-opacity": 0.75, stroke: "var(--tarjeta)", "stroke-width": 1 }, svg);
+  }
+  document.getElementById("dispersion").appendChild(svg);
+})();
+
+/* Desglose del tiempo humano contra el límite */
+(() => {
+  const COLORES = { Leer: "var(--azul)", Pensar: "var(--tinta)", Tocar: "var(--verde)", Tipear: "var(--naranja)" };
+  const ley = document.getElementById("leyenda-desglose");
+  for (const [a, c] of Object.entries(COLORES)) ley.insertAdjacentHTML("beforeend", `<span><i style="background:${c}"></i>${a}</span>`);
+  ley.insertAdjacentHTML("beforeend", `<span><i style="background:var(--grilla)"></i>Margen hasta el límite</span>`);
+  const W = 980, filaH = 46, m = { l: 150, r: 16, t: 10 };
+  const H = m.t + 2 * (filaH + 34);
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Tiempo humano de una persona promedio contra cada límite" });
+  ["owner", "invitado"].forEach((k, i) => {
+    const lim = D.limites[k];
+    const partes = D.desglose[k].filter(p => p.s > 0);
+    const total = partes.reduce((a, p) => a + p.s, 0);
+    const y = m.t + i * (filaH + 34);
+    const X = s => m.l + (s / lim) * (W - m.l - m.r);
+    texto(svg, 0, y + filaH / 2 - 2, NOMBRES[k], { class: "fuerte", style: "font-size:14px" });
+    texto(svg, 0, y + filaH / 2 + 15, `límite ${limiteTxt(lim)}`, {});
+    el("rect", { x: X(0), y, width: X(lim) - X(0), height: filaH, rx: 10, fill: "var(--grilla)" }, svg);
+    let acc = 0;
+    for (const p of partes) {
+      const x0 = X(acc), x1 = X(acc + p.s);
+      el("rect", { x: x0, y, width: Math.max(0, x1 - x0 - 2), height: filaH, rx: 6, fill: COLORES[p.accion] }, svg);
+      if (x1 - x0 > 52) texto(svg, (x0 + x1) / 2, y + filaH / 2 + 4, `${fmt(p.s)} s`, { "text-anchor": "middle", style: "fill:var(--tarjeta);font-weight:800" });
+      acc += p.s;
+    }
+    texto(svg, X(total) + 8, y + filaH / 2 + 4, `${fmt(total)} s de ${fmt(lim)} s · margen ${fmt(lim - total)} s`, { class: "fuerte" });
+  });
+  document.getElementById("desglose").appendChild(svg);
+})();
+
+/* Contraste con el KPI */
+(() => {
+  const c = D.contraste;
+  const pct = c.eventos ? (100 * c.rapidos) / c.eventos : 0;
+  document.getElementById("kpi-grande").textContent = `${fmt(pct)}%`;
+  document.getElementById("kpi-texto").textContent =
+    `${fmt(c.rapidos)} de ${fmt(c.eventos)} eventos tuvieron su primer gasto en menos de 2 minutos con la misma regla del KPI diario. Esa regla no cuenta el registro, así que tiene que dar igual o más que el owner simulado, y da ${pct + 1e-9 >= (100 * D.locust.owner.dentro) / D.locust.owner.personas ? "igual o más" : "menos: hay que revisarlo"}.`;
+})();
+</script>

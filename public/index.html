@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Validación simulada del objetivo de producto de SplitIt.">
+<title>SplitIt contra reloj</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;700;800;900&family=Geist+Mono:wght@500;700&display=swap">
+<style>
+  /* Layout: una columna como la app de SplitIt; cada resultado es una tarjeta de saldo. */
+  :root {
+    --verde: #28c49e;
+    --verde-suave: rgba(40, 196, 158, 0.12);
+    --tinta: #001625;
+    --tinta-2: #6d6f77;
+    --fondo: #f1f5f9;
+    --tarjeta: #ffffff;
+    --borde: #e2e8ee;
+    --azul: #2d9cdb;
+    --azul-suave: rgba(45, 156, 219, 0.12);
+    --naranja: #e8833a;
+    --naranja-suave: rgba(242, 153, 74, 0.16);
+    --grilla: #e6ebf0;
+    --sombra: 0 18px 50px rgba(7, 27, 58, 0.10);
+    --f-texto: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --f-mono: "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --verde: #34d6ad; --verde-suave: rgba(52, 214, 173, 0.14);
+      --tinta: #e9f1f6; --tinta-2: #93a3b1; --fondo: #04121d; --tarjeta: #0b1f2e; --borde: #183245;
+      --azul: #5bb7ea; --azul-suave: rgba(91, 183, 234, 0.16); --naranja: #f4a261; --naranja-suave: rgba(244, 162, 97, 0.16);
+      --grilla: #163043; --sombra: 0 18px 50px rgba(0, 0, 0, 0.35); color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --verde: #34d6ad; --verde-suave: rgba(52, 214, 173, 0.14);
+    --tinta: #e9f1f6; --tinta-2: #93a3b1; --fondo: #04121d; --tarjeta: #0b1f2e; --borde: #183245;
+    --azul: #5bb7ea; --azul-suave: rgba(91, 183, 234, 0.16); --naranja: #f4a261; --naranja-suave: rgba(244, 162, 97, 0.16);
+    --grilla: #163043; --sombra: 0 18px 50px rgba(0, 0, 0, 0.35); color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--fondo); color: var(--tinta); font-family: var(--f-texto); font-size: 15px; line-height: 1.55;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 20px 64px;
+  }
+  .hoja { max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 56px; }
+  h1, h2, h3 { margin: 0; text-wrap: balance; color: var(--tinta); }
+  h1 { font-size: clamp(36px, 6vw, 60px); line-height: 1.08; font-weight: 800; letter-spacing: -0.02em; }
+  h2 { font-size: clamp(26px, 3.6vw, 36px); line-height: 1.15; font-weight: 800; letter-spacing: -0.01em; }
+  h3 { font-size: 16px; font-weight: 900; }
+  p { margin: 0; max-width: 64ch; }
+  .suave { color: var(--tinta-2); }
+  .num { font-variant-numeric: tabular-nums; }
+  .etiqueta { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tinta-2); }
+
+  /* Encabezado */
+  .barra { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .logo { display: inline-flex; align-items: center; border: 1px solid var(--borde); background: var(--tarjeta); border-radius: 20px; padding: 10px 14px; }
+  .logo b { font-size: 22px; font-weight: 800; line-height: 1; }
+  .logo .split { background: var(--verde); color: #fff; border-radius: 8px; padding: 4px 5px 5px 6px; }
+  .logo .it { padding-left: 1px; color: var(--tinta); }
+  .sello { font-size: 13px; color: var(--tinta-2); font-weight: 500; }
+
+  /* Portada */
+  .portada { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: 40px; align-items: center; }
+  .portada .texto { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+  .cita { border-left: 3px solid var(--verde); padding-left: 14px; color: var(--tinta-2); font-size: 14px; }
+  .tarjeta { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 24px; box-shadow: var(--sombra); }
+  .saldos { padding: 20px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .saldos .cab { margin-bottom: 10px; }
+  .saldos .cab p { font-size: 13px; }
+  .fila { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--borde); }
+  .fila:first-of-type { border-top: 0; }
+  .avatar { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-weight: 900; font-size: 13px; background: var(--fondo); color: var(--tinta); }
+  .fila .nombre { font-weight: 900; font-size: 14px; }
+  .fila .det { font-size: 12px; color: var(--tinta-2); }
+  .pill { display: inline-flex; border-radius: 999px; padding: 2px 9px; font-size: 11px; font-weight: 900; margin-top: 3px; }
+  .pill.ok { background: var(--verde-suave); color: var(--verde); }
+  .pill.no { background: var(--naranja-suave); color: var(--naranja); }
+  .monto { font-weight: 900; font-size: 22px; text-align: right; }
+  .monto small { display: block; font-size: 11px; font-weight: 500; color: var(--tinta-2); }
+  .medidor { grid-column: 2 / 4; height: 10px; border-radius: 999px; background: var(--fondo); position: relative; overflow: visible; }
+  .medidor i { position: absolute; inset: 0 auto 0 0; border-radius: 999px; background: var(--verde); }
+  .medidor .meta { position: absolute; top: -5px; bottom: -5px; width: 2px; background: var(--tinta); border-radius: 2px; }
+  .medidor .meta span { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); font-size: 10.5px; font-weight: 700; color: var(--tinta-2); white-space: nowrap; }
+  .fila.con-medidor { padding-bottom: 26px; }
+
+  /* Secciones */
+  .seccion { display: flex; flex-direction: column; gap: 20px; }
+  .seccion > header { display: flex; flex-direction: column; gap: 8px; }
+
+  /* Videos */
+  .videos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+  .reproductor { padding: 18px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  .reproductor .titulo { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+  .marco { position: relative; margin: 0 auto; width: min(100%, 300px); border-radius: 30px; border: 6px solid var(--tinta); background: var(--tinta); overflow: hidden; }
+  .marco video { display: block; width: 100%; height: auto; max-width: 100%; aspect-ratio: 412 / 839; object-fit: contain; background: #fff; }
+  .reloj { display: flex; flex-direction: column; gap: 6px; }
+  .reloj .lectura { display: flex; justify-content: space-between; font-family: var(--f-mono); font-size: 13px; font-weight: 700; }
+  .reloj .lectura .t { font-size: 24px; color: var(--verde); }
+  .pista { height: 8px; border-radius: 999px; background: var(--fondo); overflow: hidden; }
+  .pista i { display: block; height: 100%; width: 0%; background: var(--verde); border-radius: 999px; transition: width 0.2s linear; }
+  .capitulos { display: flex; flex-wrap: wrap; gap: 6px; }
+  .capitulos button, .velocidad button {
+    font: inherit; font-size: 12px; font-weight: 700; border: 1px solid var(--borde); background: var(--tarjeta); color: var(--tinta);
+    border-radius: 999px; padding: 5px 10px; cursor: pointer;
+  }
+  .capitulos button[aria-current="true"] { background: var(--verde-suave); border-color: var(--verde); color: var(--verde); }
+  .capitulos button:hover, .velocidad button:hover { border-color: var(--verde); }
+  button:focus-visible { outline: 2px solid var(--verde); outline-offset: 2px; }
+  .velocidad { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--tinta-2); }
+  .velocidad button[aria-pressed="true"] { background: var(--tinta); color: var(--tarjeta); border-color: var(--tinta); }
+
+  /* Gráficos */
+  .graficos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+  .grafico { padding: 20px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .grafico svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .grafico .pie { font-size: 13px; color: var(--tinta-2); }
+  .ancho { grid-column: 1 / -1; }
+  svg text { font-family: var(--f-texto); fill: var(--tinta-2); font-size: 11px; }
+  svg .fuerte { fill: var(--tinta); font-weight: 800; }
+  svg .grid { stroke: var(--grilla); stroke-width: 1; }
+  svg .eje { stroke: var(--borde); stroke-width: 1; }
+  svg .limite { stroke: var(--naranja); stroke-width: 1.5; stroke-dasharray: 4 4; }
+  svg .limite-txt { fill: var(--naranja); font-weight: 800; }
+  svg .p80 { stroke: var(--tinta); stroke-width: 1.5; }
+  .leyenda { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--tinta-2); }
+  .leyenda span { display: inline-flex; align-items: center; gap: 6px; }
+  .leyenda i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+
+  /* Contraste y límites */
+  .dos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+  .bloque { padding: 22px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .grande { font-size: 44px; font-weight: 900; line-height: 1; color: var(--verde); }
+  ul.limites { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  ul.limites li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; font-size: 14px; }
+  ul.limites li::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--naranja); margin-top: 6px; }
+  ol.fuentes { margin: 0; padding-left: 20px; font-size: 13px; color: var(--tinta-2); display: flex; flex-direction: column; gap: 4px; }
+  ol.fuentes a { color: var(--tinta); }
+  pre { margin: 0; background: var(--tinta); color: var(--fondo); border-radius: 16px; padding: 16px; overflow-x: auto; font-family: var(--f-mono); font-size: 13px; line-height: 1.7; }
+  footer { font-size: 13px; color: var(--tinta-2); display: flex; flex-direction: column; gap: 12px; }
+
+  @media (max-width: 820px) {
+    .portada, .videos, .graficos, .dos { grid-template-columns: minmax(0, 1fr); }
+    .ancho { grid-column: auto; }
+  }
+  @media (prefers-reduced-motion: reduce) { .pista i { transition: none; } }
+</style>
+</head>
+<body>
+
+
+<div class="hoja">
+  <div class="barra">
+    <span class="logo" aria-label="SplitIt"><b class="split">Split</b><b class="it">It</b></span>
+    <span class="sello" id="sello"></span>
+  </div>
+
+  <section class="portada">
+    <div class="texto">
+      <span class="etiqueta">Objetivo de producto · validación simulada</span>
+      <h1>Las dos metas se cumplen a ritmo humano.</h1>
+      <p class="suave">Personas simuladas, con demoras tomadas de la investigación sobre cómo usa la gente una pantalla, recorrieron SplitIt de punta a punta mientras se las cronometraba.</p>
+      <p class="cita">“Al menos el 80% de los usuarios que crean un grupo registran un gasto en menos de 2 minutos, y al menos el 80% de los invitados ve su balance en menos de 30 segundos.”</p>
+    </div>
+    <div class="tarjeta saldos" aria-label="Resultado por meta">
+      <div class="cab">
+        <h3>Resultado por meta</h3>
+        <p class="suave" id="cab-saldos"></p>
+      </div>
+      <div id="filas-meta"></div>
+    </div>
+  </section>
+
+  <section class="seccion">
+    <header>
+      <span class="etiqueta">Grabado durante la corrida</span>
+      <h2>Mirá a una persona hacerlo</h2>
+      <p class="suave">Navegadores reales en tamaño celular, con la carga de todos los demás usuarios encima. Es la persona con el ritmo más parecido al promedio. Tocá un momento para saltar a esa parte.</p>
+    </header>
+    <div class="videos" id="videos"></div>
+  </section>
+
+  <section class="seccion">
+    <header>
+      <span class="etiqueta">Todas las personas simuladas</span>
+      <h2>Casi todos terminan con margen</h2>
+      <p class="suave" id="intro-todos"></p>
+    </header>
+    <div class="graficos">
+      <div class="tarjeta grafico"><h3>Owner: del registro al primer gasto</h3><div id="hist-owner"></div><p class="pie" id="pie-owner"></p></div>
+      <div class="tarjeta grafico"><h3>Invitado: del link a su saldo</h3><div id="hist-invitado"></div><p class="pie" id="pie-invitado"></p></div>
+      <div class="tarjeta grafico ancho">
+        <h3>El tiempo lo pone la persona, no la app</h3>
+        <div class="leyenda"><span><i style="background:var(--verde)"></i>Owner</span><span><i style="background:var(--azul)"></i>Invitado</span><span><i style="background:var(--naranja)"></i>Límite de cada recorrido</span></div>
+        <div id="dispersion"></div>
+        <p class="pie">Cada punto es una persona. A la derecha, las más lentas. El alto es el tiempo que tardó, como parte de su límite. La app respondió cada paso en milésimas de segundo, así que la diferencia la hace el ritmo de cada uno.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="seccion">
+    <header>
+      <span class="etiqueta">De dónde salen las demoras</span>
+      <h2>En qué se va el tiempo de una persona promedio</h2>
+      <p class="suave">Cada acción tarda lo que mide la investigación: pensar antes de actuar, llevar el dedo al botón, tipear en el celular y leer. Sumadas, dejan un margen amplio contra cada límite.</p>
+    </header>
+    <div class="tarjeta grafico">
+      <div class="leyenda" id="leyenda-desglose"></div>
+      <div id="desglose"></div>
+      <ol class="fuentes">
+        <li>Pensar 1,35 s y tocar 1,2 s: modelo KLM. <a href="https://doi.org/10.1145/358886.358895" target="_blank" rel="noopener">Card, Moran y Newell, 1980</a>.</li>
+        <li>Tipear 0,33 s por letra, unas 36 palabras por minuto en celular: <a href="https://doi.org/10.1145/3338286.3340120" target="_blank" rel="noopener">Palin et al., 2019</a>, 37.370 personas.</li>
+        <li>Leer 0,25 s por palabra, unas 240 por minuto: <a href="https://doi.org/10.1016/j.jml.2019.104047" target="_blank" rel="noopener">Brysbaert, 2019</a>.</li>
+        <li>Variación entre personas: supuesto del orden de la dispersión del tipeo en Palin (2019) y <a href="https://doi.org/10.1145/3173574.3174220" target="_blank" rel="noopener">Dhakal et al., 2018</a>.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="dos">
+    <div class="tarjeta bloque">
+      <span class="etiqueta">Contraste con el KPI diario</span>
+      <div class="grande num" id="kpi-grande"></div>
+      <p id="kpi-texto"></p>
+    </div>
+    <div class="tarjeta bloque">
+      <span class="etiqueta">Lo que no cubre</span>
+      <ul class="limites">
+        <li><span>Que alguien entienda una pantalla la primera vez. El robot sabe qué tocar; una persona puede dudar o volver atrás.</span></li>
+        <li><span>Lo que tarda en abrir la ventana real de Google y la red del celular.</span></li>
+        <li><span>Eventos grandes: el recorrido usa tres amigos y un gasto.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>
+    <p>Todo corrió en una sola máquina, sobre una copia de SplitIt con base propia y un Google simulado que la app verifica como el real. La app no se modificó y ningún KPI salió a la plataforma de la cátedra. Para repetirla, desde la carpeta <code>splitit-simulacion</code>:</p>
+    <pre>./sim.sh levantar
+./sim.sh correr
+.venv/bin/python -I informe/armar.py .</pre>
+  </footer>
+</div>
+
+<script>
+const D = {"fecha": "12/11/2026", "usuarios": 30, "meta": 80, "limites": {"owner": 120, "invitado": 30}, "locust": {"owner": {"personas": 39, "dentro": 39, "p50": 61.39293551445007, "p80": 76.52593216896058, "p95": 103.02578954696656, "detalle": [{"segundos": 38.49, "termino": true, "ritmo": 0.627}, {"segundos": 61.39, "termino": true, "ritmo": 1.031}, {"segundos": 59.26, "termino": true, "ritmo": 0.975}, {"segundos": 64.2, "termino": true, "ritmo": 1.106}, {"segundos": 74.34, "termino": true, "ritmo": 1.218}, {"segundos": 66.9, "termino": true, "ritmo": 1.102}, {"segundos": 72.22, "termino": true, "ritmo": 1.211}, {"segundos": 39.31, "termino": true, "ritmo": 0.655}, {"segundos": 102.68, "termino": true, "ritmo": 1.685}, {"segundos": 66.05, "termino": true, "ritmo": 1.097}, {"segundos": 36.66, "termino": true, "ritmo": 0.597}, {"segundos": 45.23, "termino": true, "ritmo": 0.749}, {"segundos": 61.38, "termino": true, "ritmo": 0.994}, {"segundos": 47.17, "termino": true, "ritmo": 0.787}, {"segundos": 32.97, "termino": true, "ritmo": 0.555}, {"segundos": 53.84, "termino": true, "ritmo": 0.889}, {"segundos": 85.52, "termino": true, "ritmo": 1.396}, {"segundos": 63.39, "termino": true, "ritmo": 1.078}, {"segundos": 68.22, "termino": true, "ritmo": 1.142}, {"segundos": 65.31, "termino": true, "ritmo": 1.055}, {"segundos": 40.2, "termino": true, "ritmo": 0.667}, {"segundos": 47.99, "termino": true, "ritmo": 0.811}, {"segundos": 96.39, "termino": true, "ritmo": 1.555}, {"segundos": 83.47, "termino": true, "ritmo": 1.406}, {"segundos": 79.81, "termino": true, "ritmo": 1.325}, {"segundos": 51.61, "termino": true, "ritmo": 0.854}, {"segundos": 79.82, "termino": true, "ritmo": 1.364}, {"segundos": 51.09, "termino": true, "ritmo": 0.824}, {"segundos": 48.11, "termino": true, "ritmo": 0.803}, {"segundos": 58.84, "termino": true, "ritmo": 0.937}, {"segundos": 61.1, "termino": true, "ritmo": 0.999}, {"segundos": 69.05, "termino": true, "ritmo": 1.154}, {"segundos": 56.0, "termino": true, "ritmo": 0.941}, {"segundos": 37.99, "termino": true, "ritmo": 0.642}, {"segundos": 116.91, "termino": true, "ritmo": 1.98}, {"segundos": 60.15, "termino": true, "ritmo": 0.967}, {"segundos": 106.17, "termino": true, "ritmo": 1.754}, {"segundos": 64.2, "termino": true, "ritmo": 1.063}, {"segundos": 65.05, "termino": true, "ritmo": 1.075}]}, "invitado": {"personas": 269, "dentro": 259, "p50": 15.411550521850586, "p80": 21.266149473190307, "p95": 29.05776205062866, "detalle": [{"segundos": 9.29, "termino": true, "ritmo": 0.564}, {"segundos": 9.44, "termino": true, "ritmo": 0.559}, {"segundos": 9.48, "termino": true, "ritmo": 0.568}, {"segundos": 10.09, "termino": true, "ritmo": 0.651}, {"segundos": 12.94, "termino": true, "ritmo": 0.871}, {"segundos": 12.16, "termino": true, "ritmo": 0.777}, {"segundos": 14.03, "termino": true, "ritmo": 0.896}, {"segundos": 14.36, "termino": true, "ritmo": 0.875}, {"segundos": 14.1, "termino": true, "ritmo": 0.911}, {"segundos": 13.88, "termino": true, "ritmo": 0.84}, {"segundos": 14.05, "termino": true, "ritmo": 0.871}, {"segundos": 14.17, "termino": true, "ritmo": 0.887}, {"segundos": 13.99, "termino": true, "ritmo": 0.857}, {"segundos": 19.5, "termino": true, "ritmo": 1.225}, {"segundos": 17.59, "termino": true, "ritmo": 1.083}, {"segundos": 15.6, "termino": true, "ritmo": 0.971}, {"segundos": 20.96, "termino": true, "ritmo": 1.383}, {"segundos": 20.34, "termino": true, "ritmo": 1.292}, {"segundos": 20.15, "termino": true, "ritmo": 1.261}, {"segundos": 11.12, "termino": true, "ritmo": 0.711}, {"segundos": 23.79, "termino": true, "ritmo": 1.423}, {"segundos": 26.2, "termino": true, "ritmo": 1.676}, {"segundos": 13.9, "termino": true, "ritmo": 0.883}, {"segundos": 16.32, "termino": true, "ritmo": 1.003}, {"segundos": 29.09, "termino": true, "ritmo": 1.773}, {"segundos": 9.47, "termino": true, "ritmo": 0.579}, {"segundos": 10.86, "termino": true, "ritmo": 0.668}, {"segundos": 17.85, "termino": true, "ritmo": 1.11}, {"segundos": 16.63, "termino": true, "ritmo": 1.095}, {"segundos": 14.97, "termino": true, "ritmo": 0.974}, {"segundos": 18.95, "termino": true, "ritmo": 1.23}, {"segundos": 4.9, "termino": true, "ritmo": 0.305}, {"segundos": 12.29, "termino": true, "ritmo": 0.773}, {"segundos": 21.29, "termino": true, "ritmo": 1.297}, {"segundos": 17.74, "termino": true, "ritmo": 1.137}, {"segundos": 14.51, "termino": true, "ritmo": 0.882}, {"segundos": 12.42, "termino": true, "ritmo": 0.777}, {"segundos": 13.11, "termino": true, "ritmo": 0.828}, {"segundos": 12.08, "termino": true, "ritmo": 0.723}, {"segundos": 19.87, "termino": true, "ritmo": 1.293}, {"segundos": 14.56, "termino": true, "ritmo": 0.914}, {"segundos": 16.89, "termino": true, "ritmo": 1.025}, {"segundos": 14.86, "termino": true, "ritmo": 0.89}, {"segundos": 10.51, "termino": true, "ritmo": 0.704}, {"segundos": 4.85, "termino": true, "ritmo": 0.297}, {"segundos": 24.15, "termino": true, "ritmo": 1.548}, {"segundos": 27.81, "termino": true, "ritmo": 1.842}, {"segundos": 11.23, "termino": true, "ritmo": 0.716}, {"segundos": 11.98, "termino": true, "ritmo": 0.763}, {"segundos": 13.27, "termino": true, "ritmo": 0.86}, {"segundos": 11.9, "termino": true, "ritmo": 0.758}, {"segundos": 10.75, "termino": true, "ritmo": 0.662}, {"segundos": 14.2, "termino": true, "ritmo": 0.874}, {"segundos": 15.75, "termino": true, "ritmo": 1.022}, {"segundos": 22.21, "termino": true, "ritmo": 1.408}, {"segundos": 12.08, "termino": true, "ritmo": 0.741}, {"segundos": 18.42, "termino": true, "ritmo": 1.168}, {"segundos": 13.67, "termino": true, "ritmo": 0.881}, {"segundos": 24.44, "termino": true, "ritmo": 1.591}, {"segundos": 20.25, "termino": true, "ritmo": 1.191}, {"segundos": 9.86, "termino": true, "ritmo": 0.648}, {"segundos": 19.06, "termino": true, "ritmo": 1.252}, {"segundos": 20.38, "termino": true, "ritmo": 1.228}, {"segundos": 15.11, "termino": true, "ritmo": 0.957}, {"segundos": 12.81, "termino": true, "ritmo": 0.826}, {"segundos": 14.22, "termino": true, "ritmo": 0.86}, {"segundos": 13.74, "termino": true, "ritmo": 0.868}, {"segundos": 16.96, "termino": true, "ritmo": 1.093}, {"segundos": 11.42, "termino": true, "ritmo": 0.701}, {"segundos": 13.7, "termino": true, "ritmo": 0.891}, {"segundos": 17.79, "termino": true, "ritmo": 1.162}, {"segundos": 12.5, "termino": true, "ritmo": 0.824}, {"segundos": 29.88, "termino": true, "ritmo": 1.93}, {"segundos": 16.46, "termino": true, "ritmo": 1.035}, {"segundos": 8.09, "termino": true, "ritmo": 0.529}, {"segundos": 9.41, "termino": true, "ritmo": 0.602}, {"segundos": 15.02, "termino": true, "ritmo": 0.923}, {"segundos": 10.64, "termino": true, "ritmo": 0.661}, {"segundos": 11.13, "termino": true, "ritmo": 0.704}, {"segundos": 18.82, "termino": true, "ritmo": 1.107}, {"segundos": 13.98, "termino": true, "ritmo": 0.911}, {"segundos": 15.19, "termino": true, "ritmo": 0.94}, {"segundos": 14.41, "termino": true, "ritmo": 0.924}, {"segundos": 10.55, "termino": true, "ritmo": 0.681}, {"segundos": 22.81, "termino": true, "ritmo": 1.46}, {"segundos": 12.1, "termino": true, "ritmo": 0.748}, {"segundos": 9.26, "termino": true, "ritmo": 0.587}, {"segundos": 19.63, "termino": true, "ritmo": 1.25}, {"segundos": 14.6, "termino": true, "ritmo": 0.929}, {"segundos": 7.63, "termino": true, "ritmo": 0.46}, {"segundos": 13.61, "termino": true, "ritmo": 0.856}, {"segundos": 11.67, "termino": true, "ritmo": 0.722}, {"segundos": 12.44, "termino": true, "ritmo": 0.785}, {"segundos": 13.01, "termino": true, "ritmo": 0.867}, {"segundos": 8.98, "termino": true, "ritmo": 0.576}, {"segundos": 15.61, "termino": true, "ritmo": 0.984}, {"segundos": 16.46, "termino": true, "ritmo": 1.072}, {"segundos": 50.66, "termino": true, "ritmo": 3.263}, {"segundos": 13.5, "termino": true, "ritmo": 0.889}, {"segundos": 16.49, "termino": true, "ritmo": 1.054}, {"segundos": 18.96, "termino": true, "ritmo": 1.152}, {"segundos": 14.92, "termino": true, "ritmo": 0.922}, {"segundos": 37.48, "termino": true, "ritmo": 2.351}, {"segundos": 11.04, "termino": true, "ritmo": 0.706}, {"segundos": 32.0, "termino": true, "ritmo": 2.093}, {"segundos": 11.68, "termino": true, "ritmo": 0.718}, {"segundos": 22.03, "termino": true, "ritmo": 1.418}, {"segundos": 12.63, "termino": true, "ritmo": 0.813}, {"segundos": 11.63, "termino": true, "ritmo": 0.717}, {"segundos": 8.88, "termino": true, "ritmo": 0.588}, {"segundos": 12.39, "termino": true, "ritmo": 0.743}, {"segundos": 20.81, "termino": true, "ritmo": 1.254}, {"segundos": 9.25, "termino": true, "ritmo": 0.588}, {"segundos": 14.33, "termino": true, "ritmo": 0.908}, {"segundos": 18.53, "termino": true, "ritmo": 1.121}, {"segundos": 8.57, "termino": true, "ritmo": 0.519}, {"segundos": 16.82, "termino": true, "ritmo": 1.008}, {"segundos": 10.45, "termino": true, "ritmo": 0.684}, {"segundos": 23.11, "termino": true, "ritmo": 1.448}, {"segundos": 15.79, "termino": true, "ritmo": 0.947}, {"segundos": 27.0, "termino": true, "ritmo": 1.699}, {"segundos": 21.76, "termino": true, "ritmo": 1.476}, {"segundos": 26.69, "termino": true, "ritmo": 1.55}, {"segundos": 15.6, "termino": true, "ritmo": 1.006}, {"segundos": 8.64, "termino": true, "ritmo": 0.559}, {"segundos": 8.44, "termino": true, "ritmo": 0.521}, {"segundos": 9.05, "termino": true, "ritmo": 0.559}, {"segundos": 22.04, "termino": true, "ritmo": 1.3}, {"segundos": 14.47, "termino": true, "ritmo": 0.959}, {"segundos": 13.56, "termino": true, "ritmo": 0.836}, {"segundos": 14.88, "termino": true, "ritmo": 0.871}, {"segundos": 20.77, "termino": true, "ritmo": 1.314}, {"segundos": 14.87, "termino": true, "ritmo": 0.972}, {"segundos": 12.06, "termino": true, "ritmo": 0.767}, {"segundos": 20.27, "termino": true, "ritmo": 1.268}, {"segundos": 38.81, "termino": true, "ritmo": 2.429}, {"segundos": 22.84, "termino": true, "ritmo": 1.426}, {"segundos": 20.15, "termino": true, "ritmo": 1.258}, {"segundos": 11.33, "termino": true, "ritmo": 0.703}, {"segundos": 11.77, "termino": true, "ritmo": 0.733}, {"segundos": 14.95, "termino": true, "ritmo": 0.96}, {"segundos": 10.07, "termino": true, "ritmo": 0.676}, {"segundos": 15.82, "termino": true, "ritmo": 0.994}, {"segundos": 15.27, "termino": true, "ritmo": 0.975}, {"segundos": 16.1, "termino": true, "ritmo": 1.034}, {"segundos": 14.62, "termino": true, "ritmo": 0.913}, {"segundos": 14.84, "termino": true, "ritmo": 0.946}, {"segundos": 21.01, "termino": true, "ritmo": 1.313}, {"segundos": 28.72, "termino": true, "ritmo": 1.861}, {"segundos": 14.65, "termino": true, "ritmo": 0.93}, {"segundos": 19.36, "termino": true, "ritmo": 1.198}, {"segundos": 10.13, "termino": true, "ritmo": 0.664}, {"segundos": 13.1, "termino": true, "ritmo": 0.796}, {"segundos": 10.83, "termino": true, "ritmo": 0.659}, {"segundos": 18.13, "termino": true, "ritmo": 1.12}, {"segundos": 7.07, "termino": true, "ritmo": 0.457}, {"segundos": 15.1, "termino": true, "ritmo": 0.942}, {"segundos": 28.06, "termino": true, "ritmo": 1.701}, {"segundos": 13.16, "termino": true, "ritmo": 0.83}, {"segundos": 11.83, "termino": true, "ritmo": 0.742}, {"segundos": 33.85, "termino": true, "ritmo": 2.331}, {"segundos": 19.75, "termino": true, "ritmo": 1.256}, {"segundos": 17.09, "termino": true, "ritmo": 1.099}, {"segundos": 16.6, "termino": true, "ritmo": 1.052}, {"segundos": 25.78, "termino": true, "ritmo": 1.625}, {"segundos": 16.82, "termino": true, "ritmo": 1.053}, {"segundos": 18.56, "termino": true, "ritmo": 1.171}, {"segundos": 20.02, "termino": true, "ritmo": 1.246}, {"segundos": 14.76, "termino": true, "ritmo": 0.9}, {"segundos": 15.06, "termino": true, "ritmo": 0.968}, {"segundos": 17.72, "termino": true, "ritmo": 1.053}, {"segundos": 13.14, "termino": true, "ritmo": 0.833}, {"segundos": 10.94, "termino": true, "ritmo": 0.673}, {"segundos": 24.65, "termino": true, "ritmo": 1.53}, {"segundos": 17.42, "termino": true, "ritmo": 1.083}, {"segundos": 25.02, "termino": true, "ritmo": 1.592}, {"segundos": 25.55, "termino": true, "ritmo": 1.579}, {"segundos": 7.85, "termino": true, "ritmo": 0.502}, {"segundos": 21.25, "termino": true, "ritmo": 1.379}, {"segundos": 18.0, "termino": true, "ritmo": 1.093}, {"segundos": 9.39, "termino": true, "ritmo": 0.612}, {"segundos": 12.77, "termino": true, "ritmo": 0.76}, {"segundos": 21.37, "termino": true, "ritmo": 1.31}, {"segundos": 17.33, "termino": true, "ritmo": 1.118}, {"segundos": 18.21, "termino": true, "ritmo": 1.156}, {"segundos": 23.3, "termino": true, "ritmo": 1.483}, {"segundos": 20.86, "termino": true, "ritmo": 1.377}, {"segundos": 15.6, "termino": true, "ritmo": 0.94}, {"segundos": 12.19, "termino": true, "ritmo": 0.776}, {"segundos": 23.88, "termino": true, "ritmo": 1.492}, {"segundos": 10.03, "termino": true, "ritmo": 0.601}, {"segundos": 18.57, "termino": true, "ritmo": 1.189}, {"segundos": 26.47, "termino": true, "ritmo": 1.652}, {"segundos": 18.04, "termino": true, "ritmo": 1.098}, {"segundos": 24.96, "termino": true, "ritmo": 1.542}, {"segundos": 25.78, "termino": true, "ritmo": 1.564}, {"segundos": 8.77, "termino": true, "ritmo": 0.545}, {"segundos": 10.64, "termino": true, "ritmo": 0.652}, {"segundos": 9.12, "termino": true, "ritmo": 0.588}, {"segundos": 12.15, "termino": true, "ritmo": 0.774}, {"segundos": 21.04, "termino": true, "ritmo": 1.346}, {"segundos": 11.49, "termino": true, "ritmo": 0.722}, {"segundos": 24.48, "termino": true, "ritmo": 1.562}, {"segundos": 19.46, "termino": true, "ritmo": 1.157}, {"segundos": 11.41, "termino": true, "ritmo": 0.713}, {"segundos": 18.62, "termino": true, "ritmo": 1.143}, {"segundos": 10.88, "termino": true, "ritmo": 0.715}, {"segundos": 15.41, "termino": true, "ritmo": 0.968}, {"segundos": 13.11, "termino": true, "ritmo": 0.802}, {"segundos": 21.19, "termino": true, "ritmo": 1.297}, {"segundos": 12.68, "termino": true, "ritmo": 0.833}, {"segundos": 18.44, "termino": true, "ritmo": 1.161}, {"segundos": 24.31, "termino": true, "ritmo": 1.563}, {"segundos": 16.15, "termino": true, "ritmo": 1.008}, {"segundos": 34.82, "termino": true, "ritmo": 2.119}, {"segundos": 10.41, "termino": true, "ritmo": 0.634}, {"segundos": 26.37, "termino": true, "ritmo": 1.6}, {"segundos": 15.22, "termino": true, "ritmo": 0.919}, {"segundos": 20.45, "termino": true, "ritmo": 1.247}, {"segundos": 32.72, "termino": true, "ritmo": 1.991}, {"segundos": 11.81, "termino": true, "ritmo": 0.728}, {"segundos": 13.42, "termino": true, "ritmo": 0.89}, {"segundos": 24.33, "termino": true, "ritmo": 1.539}, {"segundos": 12.12, "termino": true, "ritmo": 0.748}, {"segundos": 21.23, "termino": true, "ritmo": 1.327}, {"segundos": 15.55, "termino": true, "ritmo": 1.015}, {"segundos": 11.71, "termino": true, "ritmo": 0.759}, {"segundos": 11.51, "termino": true, "ritmo": 0.711}, {"segundos": 12.91, "termino": true, "ritmo": 0.803}, {"segundos": 15.41, "termino": true, "ritmo": 0.929}, {"segundos": 29.01, "termino": true, "ritmo": 1.891}, {"segundos": 17.94, "termino": true, "ritmo": 1.106}, {"segundos": 21.04, "termino": true, "ritmo": 1.323}, {"segundos": 16.62, "termino": true, "ritmo": 1.065}, {"segundos": 16.73, "termino": true, "ritmo": 1.05}, {"segundos": 26.8, "termino": true, "ritmo": 1.63}, {"segundos": 24.99, "termino": true, "ritmo": 1.52}, {"segundos": 13.19, "termino": true, "ritmo": 0.823}, {"segundos": 16.89, "termino": true, "ritmo": 1.013}, {"segundos": 15.06, "termino": true, "ritmo": 1.01}, {"segundos": 15.81, "termino": true, "ritmo": 0.963}, {"segundos": 19.21, "termino": true, "ritmo": 1.261}, {"segundos": 22.23, "termino": true, "ritmo": 1.369}, {"segundos": 12.35, "termino": true, "ritmo": 0.771}, {"segundos": 10.2, "termino": true, "ritmo": 0.617}, {"segundos": 22.58, "termino": true, "ritmo": 1.4}, {"segundos": 15.34, "termino": true, "ritmo": 0.924}, {"segundos": 18.34, "termino": true, "ritmo": 1.183}, {"segundos": 18.24, "termino": true, "ritmo": 1.214}, {"segundos": 10.63, "termino": true, "ritmo": 0.68}, {"segundos": 17.88, "termino": true, "ritmo": 1.065}, {"segundos": 9.62, "termino": true, "ritmo": 0.621}, {"segundos": 15.45, "termino": true, "ritmo": 1.013}, {"segundos": 14.0, "termino": true, "ritmo": 0.857}, {"segundos": 26.3, "termino": true, "ritmo": 1.605}, {"segundos": 46.83, "termino": true, "ritmo": 2.866}, {"segundos": 13.19, "termino": true, "ritmo": 0.821}, {"segundos": 12.0, "termino": true, "ritmo": 0.775}, {"segundos": 30.36, "termino": true, "ritmo": 1.927}, {"segundos": 15.98, "termino": true, "ritmo": 0.933}, {"segundos": 29.22, "termino": true, "ritmo": 1.784}, {"segundos": 16.34, "termino": true, "ritmo": 1.028}, {"segundos": 29.12, "termino": true, "ritmo": 1.874}, {"segundos": 20.1, "termino": true, "ritmo": 1.24}, {"segundos": 24.75, "termino": true, "ritmo": 1.501}, {"segundos": 18.97, "termino": true, "ritmo": 1.236}, {"segundos": 23.88, "termino": true, "ritmo": 1.541}, {"segundos": 26.1, "termino": true, "ritmo": 1.636}, {"segundos": 31.91, "termino": true, "ritmo": 2.032}]}}, "navegadores": [{"recorrido": "invitado", "segundos": 12.7, "ok": true, "ritmo": 0.78}, {"recorrido": "invitado", "segundos": 12.8, "ok": true, "ritmo": 0.74}, {"recorrido": "invitado", "segundos": 20.6, "ok": true, "ritmo": 1.26}, {"recorrido": "owner", "segundos": 59.6, "ok": true, "ritmo": 0.98}, {"recorrido": "owner", "segundos": 74.6, "ok": true, "ritmo": 1.26}, {"recorrido": "owner", "segundos": 70.5, "ok": true, "ritmo": 1.13}], "videos": {"owner": {"mp4": "videos/owner.mp4", "webm": "videos/owner.webm", "ritmo": 0.98, "segundos": 59.6, "momentos": [{"momento": "Llega a la portada", "s": 0}, {"momento": "Se registra con Google", "s": 7.9}, {"momento": "Crea el evento", "s": 16.2}, {"momento": "Carga el primer gasto", "s": 44.8}, {"momento": "Ve su gasto", "s": 59.6}]}, "invitado": {"mp4": "videos/invitado.mp4", "webm": "videos/invitado.webm", "ritmo": 0.78, "segundos": 12.7, "momentos": [{"momento": "Abre el link", "s": 0.2}, {"momento": "Se elige en la lista", "s": 5.2}, {"momento": "Busca su saldo", "s": 10.3}, {"momento": "Ve su saldo", "s": 12.3}]}}, "contraste": {"eventos": 42, "rapidos": 42}, "desglose": {"owner": [{"accion": "Leer", "s": 14.2}, {"accion": "Pensar", "s": 14.9}, {"accion": "Tocar", "s": 16.8}, {"accion": "Tipear", "s": 13.5}], "invitado": [{"accion": "Leer", "s": 4.5}, {"accion": "Pensar", "s": 5.4}, {"accion": "Tocar", "s": 6.0}, {"accion": "Tipear", "s": 0.0}]}};
+const NS = "http://www.w3.org/2000/svg";
+const fmt = (n, d = 0) => n.toLocaleString("es-AR", { minimumFractionDigits: d, maximumFractionDigits: d });
+const reloj = s => { s = Math.max(0, s); return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`; };
+const limiteTxt = s => s >= 60 ? `${s / 60} min` : `${s} s`;
+const NOMBRES = { owner: "Owner", invitado: "Invitado" };
+const DETALLE = { owner: "Se registra, crea el evento y carga un gasto", invitado: "Abre el link y ve su saldo, sin cuenta" };
+
+function el(tag, attrs = {}, padre) {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  if (padre) padre.appendChild(e);
+  return e;
+}
+function texto(padre, x, y, contenido, attrs = {}) {
+  const t = el("text", { x, y, ...attrs }, padre);
+  t.textContent = contenido;
+  return t;
+}
+
+/* Encabezado y tarjeta de metas */
+document.getElementById("sello").textContent = `Corrida local del ${D.fecha} · ${D.usuarios} usuarios a la vez`;
+document.getElementById("cab-saldos").textContent = `Meta: ${D.meta}% de las personas dentro del límite`;
+const filas = document.getElementById("filas-meta");
+for (const k of ["owner", "invitado"]) {
+  const r = D.locust[k];
+  const pct = r.personas ? (100 * r.dentro) / r.personas : 0;
+  const margen = pct - D.meta;
+  const cumple = pct >= D.meta;
+  const f = document.createElement("div");
+  f.className = "fila con-medidor";
+  f.innerHTML = `
+    <span class="avatar">${k === "owner" ? "OW" : "IN"}</span>
+    <div><div class="nombre">${NOMBRES[k]} · menos de ${limiteTxt(D.limites[k])}</div>
+      <div class="det">${DETALLE[k]}</div>
+      <span class="pill ${cumple ? "ok" : "no"}">${cumple ? "cumple" : "no cumple"}</span></div>
+    <div class="monto num" style="color:${cumple ? "var(--verde)" : "var(--naranja)"}">${fmt(pct)}%
+      <small>${margen >= 0 ? "+" : ""}${fmt(margen)} pts sobre la meta</small></div>
+    <div class="medidor" role="img" aria-label="${fmt(pct)}% dentro del límite, meta ${D.meta}%">
+      <i style="width:${pct}%; background:${cumple ? "var(--verde)" : "var(--naranja)"}"></i>
+      <span class="meta" style="left:${D.meta}%"><span>meta ${D.meta}%</span></span>
+    </div>`;
+  filas.appendChild(f);
+}
+
+/* Videos con cronómetro */
+const vids = document.getElementById("videos");
+for (const k of ["owner", "invitado"]) {
+  const v = D.videos[k];
+  const inicio = v.momentos[0]?.s ?? 0;
+  const fin = v.momentos.at(-1)?.s ?? inicio + v.segundos;
+  const lim = D.limites[k];
+  const card = document.createElement("div");
+  card.className = "tarjeta reproductor";
+  card.innerHTML = `
+    <div class="titulo"><h3>${NOMBRES[k]}: ${DETALLE[k].toLowerCase()}</h3>
+      <span class="suave num" style="font-size:12px">ritmo ${fmt(v.ritmo, 2)}× · terminó en ${fmt(v.segundos)} s</span></div>
+    <div class="marco"><video muted autoplay loop playsinline preload="auto" aria-label="Grabación del recorrido del ${NOMBRES[k].toLowerCase()}"><source src="${v.mp4}" type="video/mp4"><source src="${v.webm}" type="video/webm"></video></div>
+    <div class="reloj">
+      <div class="lectura"><span class="t num">0:00</span><span class="suave num">límite ${reloj(lim)}</span></div>
+      <div class="pista" role="img" aria-label="Tiempo usado del límite"><i></i></div>
+    </div>
+    <div class="capitulos"></div>
+    <div class="velocidad">Velocidad <button type="button" data-v="1" aria-pressed="false">1×</button><button type="button" data-v="2" aria-pressed="true">2×</button></div>`;
+  vids.appendChild(card);
+  const video = card.querySelector("video");
+  const t = card.querySelector(".t");
+  const barra = card.querySelector(".pista i");
+  const caps = card.querySelector(".capitulos");
+  const botones = v.momentos.slice(0, -1).map((m, i) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = m.momento;
+    b.addEventListener("click", () => { video.currentTime = m.s; video.play().catch(() => {}); });
+    caps.appendChild(b);
+    return { b, desde: m.s, hasta: v.momentos[i + 1].s };
+  });
+  video.playbackRate = 2;
+  video.addEventListener("loadedmetadata", () => { video.playbackRate = 2; });
+  card.querySelectorAll(".velocidad button").forEach(b => b.addEventListener("click", () => {
+    video.playbackRate = Number(b.dataset.v);
+    card.querySelectorAll(".velocidad button").forEach(o => o.setAttribute("aria-pressed", String(o === b)));
+  }));
+  const pintar = () => {
+    const usado = Math.min(Math.max(video.currentTime, inicio), fin) - inicio;
+    t.textContent = reloj(usado);
+    barra.style.width = `${Math.min(100, (100 * usado) / lim)}%`;
+    for (const c of botones) c.b.setAttribute("aria-current", String(video.currentTime >= c.desde && video.currentTime < c.hasta));
+  };
+  video.addEventListener("timeupdate", pintar);
+  video.addEventListener("seeked", pintar);
+}
+
+/* Histogramas */
+function histograma(k, contenedor, pie) {
+  const r = D.locust[k];
+  const lim = D.limites[k];
+  const vals = r.detalle.filter(p => p.termino).map(p => p.segundos);
+  const paso = k === "owner" ? 10 : 2;
+  const tope = Math.ceil(Math.max(lim * 1.1, ...vals) / paso) * paso;
+  const bins = Array.from({ length: tope / paso }, (_, i) => ({ desde: i * paso, n: 0 }));
+  for (const v of vals) bins[Math.min(bins.length - 1, Math.floor(v / paso))].n++;
+  const W = 480, H = 260, m = { l: 34, r: 12, t: 28, b: 36 };
+  const X = s => m.l + (s / tope) * (W - m.l - m.r);
+  const maxN = Math.max(...bins.map(b => b.n), 1);
+  const pasoY = maxN > 40 ? 20 : maxN > 16 ? 10 : maxN > 8 ? 4 : 2;
+  const topeY = Math.ceil(maxN / pasoY) * pasoY;
+  const Y = n => H - m.b - (n / topeY) * (H - m.t - m.b);
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": `Distribución de tiempos del ${NOMBRES[k].toLowerCase()}` });
+  for (let n = 0; n <= topeY; n += pasoY) {
+    el("line", { x1: m.l, x2: W - m.r, y1: Y(n), y2: Y(n), class: "grid" }, svg);
+    texto(svg, m.l - 6, Y(n) + 4, fmt(n), { "text-anchor": "end" });
+  }
+  const pasoX = k === "owner" ? 30 : 10;
+  for (let s = 0; s <= tope; s += pasoX) texto(svg, X(s), H - m.b + 16, `${s} s`, { "text-anchor": "middle" });
+  texto(svg, (m.l + W - m.r) / 2, H - 4, "segundos que tardó", { "text-anchor": "middle" });
+  texto(svg, 0, 12, "personas", {});
+  const ancho = X(paso) - X(0) - 2;
+  for (const b of bins) {
+    if (!b.n) continue;
+    const fuera = b.desde + paso > lim;
+    el("rect", { x: X(b.desde) + 1, y: Y(b.n), width: ancho, height: Y(0) - Y(b.n), rx: 3, fill: fuera ? "var(--naranja)" : "var(--verde)" }, svg);
+  }
+  el("line", { x1: X(lim), x2: X(lim), y1: m.t - 8, y2: H - m.b, class: "limite" }, svg);
+  texto(svg, X(lim) - 4, m.t - 12, `límite ${limiteTxt(lim)}`, { "text-anchor": "end", class: "limite-txt" });
+  if (r.p80 != null) {
+    el("line", { x1: X(r.p80), x2: X(r.p80), y1: m.t + 6, y2: H - m.b, class: "p80" }, svg);
+    const izquierda = X(r.p80) + 140 > X(lim);
+    texto(svg, X(r.p80) + (izquierda ? -5 : 5), m.t + 16, `el 80% en menos de ${fmt(r.p80)} s`, { class: "fuerte", "text-anchor": izquierda ? "end" : "start" });
+  }
+  contenedor.appendChild(svg);
+  const fuera = r.personas - r.dentro;
+  const noTerm = r.detalle.filter(p => !p.termino).length;
+  pie.textContent = `${fmt(r.personas)} personas. Mitad en menos de ${fmt(r.p50)} s. ` +
+    (fuera ? `${fmt(fuera)} se pasaron del límite${noTerm ? `, ${noTerm} sin terminar` : ""}, en naranja.` : "Ninguna se pasó del límite.");
+}
+histograma("owner", document.getElementById("hist-owner"), document.getElementById("pie-owner"));
+histograma("invitado", document.getElementById("hist-invitado"), document.getElementById("pie-invitado"));
+const totalP = D.locust.owner.personas + D.locust.invitado.personas;
+document.getElementById("intro-todos").textContent =
+  `${fmt(totalP)} personas simuladas, ${D.usuarios} a la vez, cada una con su propio ritmo: algunas rápidas, otras el doble de lentas que el promedio. Cada barra junta a las que tardaron parecido.`;
+
+/* Dispersión ritmo vs tiempo */
+(() => {
+  const W = 980, H = 320, m = { l: 48, r: 16, t: 40, b: 40 };
+  const puntos = ["owner", "invitado"].flatMap(k => D.locust[k].detalle.filter(p => p.termino).map(p => ({ k, ritmo: p.ritmo, pct: (100 * p.segundos) / D.limites[k] })));
+  const maxR = Math.max(2.5, ...puntos.map(p => p.ritmo));
+  const topeR = Math.ceil(maxR * 2) / 2;
+  const topeY = Math.max(125, Math.ceil(Math.max(...puntos.map(p => p.pct)) / 25) * 25);
+  const X = r => m.l + (r / topeR) * (W - m.l - m.r);
+  const Y = p => H - m.b - (p / topeY) * (H - m.t - m.b);
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Tiempo de cada persona según su ritmo" });
+  for (let p = 0; p <= topeY; p += 25) {
+    el("line", { x1: m.l, x2: W - m.r, y1: Y(p), y2: Y(p), class: "grid" }, svg);
+    texto(svg, m.l - 6, Y(p) + 4, `${p}%`, { "text-anchor": "end" });
+  }
+  for (let r = 0; r <= topeR + 1e-9; r += 0.5) texto(svg, X(r), H - m.b + 16, `${fmt(r, 1)}×`, { "text-anchor": "middle" });
+  texto(svg, (m.l + W - m.r) / 2, H - 4, "ritmo de la persona (1× = promedio; 2× tarda el doble en cada acción)", { "text-anchor": "middle" });
+  el("line", { x1: X(1), x2: X(1), y1: m.t, y2: H - m.b, class: "eje" }, svg);
+  el("line", { x1: m.l, x2: W - m.r, y1: Y(100), y2: Y(100), class: "limite" }, svg);
+  texto(svg, W - m.r, Y(100) - 6, "límite", { "text-anchor": "end", class: "limite-txt" });
+  texto(svg, 2, 12, "tiempo usado del límite", {});
+  // Los owners van encima: son menos y si no, los tapan los invitados.
+  puntos.sort((a, b) => (a.k === "owner") - (b.k === "owner"));
+  for (const p of puntos) {
+    el("circle", { cx: X(p.ritmo), cy: Y(p.pct), r: p.k === "owner" ? 5 : 4, fill: p.k === "owner" ? "var(--verde)" : "var(--azul)", "fill-opacity": 0.75, stroke: "var(--tarjeta)", "stroke-width": 1 }, svg);
+  }
+  document.getElementById("dispersion").appendChild(svg);
+})();
+
+/* Desglose del tiempo humano contra el límite */
+(() => {
+  const COLORES = { Leer: "var(--azul)", Pensar: "var(--tinta)", Tocar: "var(--verde)", Tipear: "var(--naranja)" };
+  const ley = document.getElementById("leyenda-desglose");
+  for (const [a, c] of Object.entries(COLORES)) ley.insertAdjacentHTML("beforeend", `<span><i style="background:${c}"></i>${a}</span>`);
+  ley.insertAdjacentHTML("beforeend", `<span><i style="background:var(--grilla)"></i>Margen hasta el límite</span>`);
+  const W = 980, filaH = 46, m = { l: 150, r: 16, t: 10 };
+  const H = m.t + 2 * (filaH + 34);
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Tiempo humano de una persona promedio contra cada límite" });
+  ["owner", "invitado"].forEach((k, i) => {
+    const lim = D.limites[k];
+    const partes = D.desglose[k].filter(p => p.s > 0);
+    const total = partes.reduce((a, p) => a + p.s, 0);
+    const y = m.t + i * (filaH + 34);
+    const X = s => m.l + (s / lim) * (W - m.l - m.r);
+    texto(svg, 0, y + filaH / 2 - 2, NOMBRES[k], { class: "fuerte", style: "font-size:14px" });
+    texto(svg, 0, y + filaH / 2 + 15, `límite ${limiteTxt(lim)}`, {});
+    el("rect", { x: X(0), y, width: X(lim) - X(0), height: filaH, rx: 10, fill: "var(--grilla)" }, svg);
+    let acc = 0;
+    for (const p of partes) {
+      const x0 = X(acc), x1 = X(acc + p.s);
+      el("rect", { x: x0, y, width: Math.max(0, x1 - x0 - 2), height: filaH, rx: 6, fill: COLORES[p.accion] }, svg);
+      if (x1 - x0 > 52) texto(svg, (x0 + x1) / 2, y + filaH / 2 + 4, `${fmt(p.s)} s`, { "text-anchor": "middle", style: "fill:var(--tarjeta);font-weight:800" });
+      acc += p.s;
+    }
+    texto(svg, X(total) + 8, y + filaH / 2 + 4, `${fmt(total)} s de ${fmt(lim)} s · margen ${fmt(lim - total)} s`, { class: "fuerte" });
+  });
+  document.getElementById("desglose").appendChild(svg);
+})();
+
+/* Contraste con el KPI */
+(() => {
+  const c = D.contraste;
+  const pct = c.eventos ? (100 * c.rapidos) / c.eventos : 0;
+  document.getElementById("kpi-grande").textContent = `${fmt(pct)}%`;
+  document.getElementById("kpi-texto").textContent =
+    `${fmt(c.rapidos)} de ${fmt(c.eventos)} eventos tuvieron su primer gasto en menos de 2 minutos con la misma regla del KPI diario. Esa regla no cuenta el registro, así que tiene que dar igual o más que el owner simulado, y da ${pct + 1e-9 >= (100 * D.locust.owner.dentro) / D.locust.owner.personas ? "igual o más" : "menos: hay que revisarlo"}.`;
+})();
+</script>
+
+</body>
+</html>

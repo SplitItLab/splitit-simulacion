@@ -1,0 +1,20 @@
+{
+  "_fuentes": {
+    "pensar_s": "KLM, operador M (preparación mental). Card, Moran y Newell, 1980.",
+    "tocar_s": "KLM, operadores P (apuntar, 1,1 s) + B (presionar, 0,1 s). Card, Moran y Newell, 1980.",
+    "tecla_s": "Tipeo en celular, ~36 palabras/min. Palin et al., 2019 (37.370 personas).",
+    "palabra_leida_s": "Lectura silenciosa, ~240 palabras/min. Brysbaert, 2019.",
+    "dispersion_sigma": "Variación entre personas. Supuesto: coeficiente de variación ~0,35-0,4, del orden de la dispersión de velocidad de tipeo en Palin 2019 y Dhakal 2018."
+  },
+  "pensar_s": 1.35,
+  "tocar_s": 1.2,
+  "tecla_s": 0.33,
+  "palabra_leida_s": 0.25,
+  "dispersion_sigma": 0.35,
+  "variacion_por_accion": 0.15,
+  "limites_s": {
+    "owner": 120,
+    "invitado": 30
+  },
+  "meta_porcentaje": 80
+}
